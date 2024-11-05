@@ -1,5 +1,5 @@
 import { Controller, useFieldArray, useForm } from "react-hook-form";
-import { ReqFormState } from "../types/request-form";
+import { ReqFormData } from "../types/request-form";
 import {
   TextField,
   Button,
@@ -16,8 +16,18 @@ import { Add, Remove } from "@mui/icons-material";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormHelperText } from "@mui/material";
+import { useDispatch, useSelector } from "react-redux";
+import { setReqFormData } from "../features/requestForm";
+import type { RootState } from "../app/store";
+import { useNavigate } from "react-router-dom";
 
 export default function RequestForm() {
+  const reqFormData: ReqFormData = useSelector(
+    (state: RootState) => state.requestForm.data
+  );
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
   const formSchema = z.object({
     fullName: z.string().trim().min(1, {
       message: "Name cannot be empty",
@@ -34,6 +44,7 @@ export default function RequestForm() {
     issueType: z.string().trim().min(1, {
       message: "Select issue type",
     }),
+    tags: z.array(z.string()),
     steps: z
       .array(
         z.object({
@@ -49,14 +60,8 @@ export default function RequestForm() {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<ReqFormState>({
-    defaultValues: {
-      fullName: "",
-      email: "",
-      issueType: "",
-      tags: [],
-      steps: [],
-    },
+  } = useForm<ReqFormData>({
+    defaultValues: reqFormData,
     resolver: zodResolver(formSchema),
   });
 
@@ -69,14 +74,22 @@ export default function RequestForm() {
     name: "steps",
   });
 
-  const onSubmit = (data: ReqFormState) => {
-    console.log(data);
+  const onSubmit = (data: ReqFormData) => {
+    dispatch(setReqFormData(data));
+    navigate("/data");
   };
 
   return (
-    <div>
-      <h2>Request Form</h2>
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100%",
+      }}
+    >
       <Stack spacing={3} width={400}>
+        <Typography variant="h4">Request Form</Typography>
         <Controller
           name="fullName"
           control={control}
@@ -117,9 +130,9 @@ export default function RequestForm() {
                   labelId="issue-label"
                   error={!!errors.issueType}
                 >
-                  <MenuItem value="bug">Bug Report</MenuItem>
-                  <MenuItem value="feature">Feature Request</MenuItem>
-                  <MenuItem value="general">General Inquiry</MenuItem>
+                  <MenuItem value="Bug Report">Bug Report</MenuItem>
+                  <MenuItem value="Feature Request">Feature Request</MenuItem>
+                  <MenuItem value="General Inquiry">General Inquiry</MenuItem>
                 </Select>
                 {!!errors.issueType && (
                   <FormHelperText error={!!errors.issueType}>
@@ -219,6 +232,6 @@ export default function RequestForm() {
           Submit
         </Button>
       </Stack>
-    </div>
+    </Box>
   );
 }
