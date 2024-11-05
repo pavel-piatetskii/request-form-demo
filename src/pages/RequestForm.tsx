@@ -13,9 +13,43 @@ import {
   IconButton,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { FormHelperText } from "@mui/material";
 
 export default function RequestForm() {
-  const form = useForm<ReqFormState>({
+  const formSchema = z.object({
+    fullName: z.string().trim().min(1, {
+      message: "Name cannot be empty",
+    }),
+    email: z
+      .string()
+      .trim()
+      .min(1, {
+        message: "E-mail cannot be empty",
+      })
+      .email({
+        message: "E-mail is not valid",
+      }),
+    issueType: z.string().trim().min(1, {
+      message: "Select issue type",
+    }),
+    steps: z
+      .array(
+        z.object({
+          step: z.string().min(1, { message: "Step cannot be empty" }),
+        })
+      )
+      .min(1, {
+        message: "Describe at least one step",
+      }),
+  });
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ReqFormState>({
     defaultValues: {
       fullName: "",
       email: "",
@@ -23,9 +57,9 @@ export default function RequestForm() {
       tags: [],
       steps: [],
     },
+    resolver: zodResolver(formSchema),
   });
-  const { control, handleSubmit } = form;
-  // const { register, handleSubmit, watch, formState: { errors } } = useForm();
+
   const {
     fields: steps,
     append,
@@ -41,22 +75,32 @@ export default function RequestForm() {
 
   return (
     <div>
-      {/* <form onSubmit={onSubmit}> */}
       <h2>Request Form</h2>
-      {/* <FormControl> */}
       <Stack spacing={3} width={400}>
         <Controller
           name="fullName"
           control={control}
           render={({ field }) => (
-            <TextField label="Full Name" {...field} type="text" />
+            <TextField
+              label="Full Name"
+              {...field}
+              type="text"
+              error={!!errors.fullName}
+              helperText={errors.fullName?.message}
+            />
           )}
         ></Controller>
         <Controller
           name="email"
           control={control}
           render={({ field }) => (
-            <TextField label="E-mail" {...field} type="text" />
+            <TextField
+              label="E-mail"
+              {...field}
+              type="text"
+              error={!!errors.email}
+              helperText={errors.email?.message}
+            />
           )}
         ></Controller>
 
@@ -67,11 +111,21 @@ export default function RequestForm() {
             render={({ field }) => (
               <>
                 <InputLabel id="issue-label">Issue Type</InputLabel>
-                <Select {...field} label="Issue Type" labelId="issue-label">
+                <Select
+                  {...field}
+                  label="Issue Type"
+                  labelId="issue-label"
+                  error={!!errors.issueType}
+                >
                   <MenuItem value="bug">Bug Report</MenuItem>
                   <MenuItem value="feature">Feature Request</MenuItem>
                   <MenuItem value="general">General Inquiry</MenuItem>
                 </Select>
+                {!!errors.issueType && (
+                  <FormHelperText error={!!errors.issueType}>
+                    {errors.issueType?.message}
+                  </FormHelperText>
+                )}
               </>
             )}
           ></Controller>
@@ -102,69 +156,69 @@ export default function RequestForm() {
         </FormControl>
 
         <FormControl>
-          {/* <InputLabel>Steps to reproduce</InputLabel> */}
-          {!steps.length && (
-            <Typography>Describe steps to reproduce the issue</Typography>
-          )}
-          {steps.map((step, i) => (
-            <Box key={`step-${i + 1}`} display="flex" flexDirection="row">
-              <Controller
-                name={`steps.${i}.step`}
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    multiline
-                    maxRows={4}
-                    label={`Step ${i + 1}`}
-                    variant="outlined"
-                    fullWidth
-                    margin="normal"
-                  />
-                )}
-              />
-              <Box display="flex" justifyContent="flex-end" marginTop={1}>
-                {steps.length > 0 && (
-                  <IconButton
-                    onClick={() => remove(i)}
-                    color="secondary"
-                    aria-label="remove step"
-                  >
-                    <Remove />
-                  </IconButton>
-                )}
-              </Box>
-            </Box>
-          ))}
-
-          <Button
-            onClick={() => append({ step: "" })}
-            startIcon={<Add />}
-            sx={{ marginBottom: 2 }}
-          >
-            Add Step
-          </Button>
-
-          {/* <Controller
-            name={`items.${index}.value`}
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label={`Item ${index + 1}`}
-                variant="outlined"
-                fullWidth
-              />
+          <Box display="flex" flexDirection="column" alignItems="left">
+            {!steps.length && (
+              <Typography align="left" sx={{ paddingLeft: 1.5 }}>
+                Describe steps to reproduce the issue
+              </Typography>
             )}
-          />
-          <Button>Describe how to reproduce the issue</Button> */}
+            {steps.map((step, i) => (
+              <Box key={step.id} display="flex" flexDirection="row">
+                <Controller
+                  name={`steps.${i}.step`}
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      multiline
+                      maxRows={4}
+                      label={`Step ${i + 1}`}
+                      variant="outlined"
+                      fullWidth
+                      margin="normal"
+                      error={!!errors.steps?.[i]?.step}
+                      helperText={errors.steps?.[i]?.step?.message}
+                    />
+                  )}
+                />
+                <Box display="flex" justifyContent="flex-end" marginTop={1}>
+                  {steps.length > 0 && (
+                    <IconButton
+                      onClick={() => remove(i)}
+                      color="secondary"
+                      aria-label="remove step"
+                    >
+                      <Remove />
+                    </IconButton>
+                  )}
+                </Box>
+              </Box>
+            ))}
+
+            <Button
+              onClick={() => append({ step: "" })}
+              startIcon={<Add />}
+              sx={{
+                marginBottom: 0,
+                width: 150,
+                justifyContent: "left",
+                paddingLeft: 2,
+              }}
+            >
+              Add Step
+            </Button>
+            {!!errors.steps && (
+              <FormHelperText error={!!errors.steps}>
+                {errors.steps?.message}
+              </FormHelperText>
+            )}
+          </Box>
         </FormControl>
 
         <Button variant="contained" onClick={handleSubmit(onSubmit)}>
           Submit
         </Button>
       </Stack>
-      {/* </form> */}
     </div>
   );
 }
